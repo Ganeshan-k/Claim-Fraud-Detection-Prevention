@@ -19,4 +19,4 @@ idna==3.7
 tqdm==4.66.4
 requests==2.31.0
 gunicorn==20.1.0
-rabbitmq-server==4.1.3
+
