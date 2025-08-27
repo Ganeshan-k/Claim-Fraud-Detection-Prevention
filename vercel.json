@@ -1,19 +1,5 @@
 {
-    "version": 2,
-    "builds": [
-        {
-            "src": "CTS_Project-main/app.py",
-            "use": "@vercel/python",
-            "config": {
-                "maxLambdaSize": "100mb",
-                "runtime": "python3.9"
-            }
-        }
-    ],
-    "routes": [
-        {
-            "src": "/(.*)",
-            "dest": "CTS_Project-main/app.py"
-        }
-    ]
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/api/index" }
+  ]
 }
