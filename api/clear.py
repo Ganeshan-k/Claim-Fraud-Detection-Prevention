@@ -1,4 +1,4 @@
-from app import db, User, EmailVerification, RecoveryCode
+from api.index import db, User, EmailVerification, RecoveryCode
 
 def confirm_clear():
     print("⚠️ This will delete all data from the database.")
@@ -7,8 +7,8 @@ def confirm_clear():
 
 if __name__ == "__main__":
     try:
-        from app import app
-        with app.app_context():
+        from api.index import index
+        with index.app_context():
             if confirm_clear():
                 models = [User, EmailVerification, RecoveryCode]
                 for model in models:
