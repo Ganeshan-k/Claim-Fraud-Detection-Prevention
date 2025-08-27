@@ -1,5 +1,14 @@
 {
-  "rewrites": [
-    { "source": "/(.*)", "destination": "/CTS_Project-main/app.py" }
-  ]
+    "builds": [
+    {
+        "src": "/CTS_Project-main/app.py",
+        "use": "@vercel/python"
+    }
+    ],
+    "routes": [
+    {
+        "src": "/(.*)",
+        "dest": "/CTS_Project-main/app.py"
+    }
+    ]
 }
