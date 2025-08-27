@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'med-blue': '#1d4ed8',
+                        'med-cyan': '#0891b2',
+                        'med-emerald': '#059669',
+                        'med-amber': '#d97706',
+                    },
+                    boxShadow: {
+                        'soft': '0 10px 25px -5px rgba(0, 0, 0, 0.08)',
+                        'hover': '0 20px 30px -10px rgba(0, 0, 0, 0.12)',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        :root {
+            --text-color: #2c2c2c;
+            --link-color: #0749b4;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: url("{{url_for('static', filename='register.jpg')}}") no-repeat center center;
+            background-size: cover;
+            background-attachment: fixed;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .card {
+            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .form-input {
+            width: 100%;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            border: 1px solid #1a355f;
+            background-color: #ffffff;
+            color: #111827;
+            transition: all 0.2s;
+        }
+        .form-input:focus {
+            outline: none;
+            border-color: #0e38ab;
+            box-shadow: 0 0 0 2px rgba(8, 35, 109, 0.25);
+        }
+        .flash-message {
+            opacity: 1;
+            transition: opacity 0.5s ease-in-out;
+        }
+        .input-icon {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #3a3939;
+        }
+        .toggle-password-icon {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+            color: #3a3939;
+        }
+        .text-custom-color {
+            color: var(--text-color);
+        }
+        .link-custom-color {
+            color: var(--link-color);
+        }
+    </style>
+</head>
+<body class="p-4 antialiased">
+    <div class="fixed top-4 right-4 z-50 flex flex-col items-end space-y-2">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+            <div class="p-4 rounded-xl shadow-lg border-l-4 flash-message {% if category == 'success' %}bg-white border-green-500{% elif category == 'error' %}bg-white border-red-500{% endif %}">
+                <p class="text-sm font-semibold text-gray-800">{{ message }}</p>
+            </div>
+            {% endfor %}
+        {% endif %}
+        {% endwith %}
+    </div>
+
+    <main class="w-full max-w-sm mx-auto">
+        <section class="card p-8 rounded-2xl shadow-xl w-full">
+            <div class="text-center mb-6">
+                <div class="w-16 h-16 mx-auto bg-gradient-to-br from-med-blue to-med-cyan rounded-3xl flex items-center justify-center shadow-lg mb-4">
+                    <i class="fas fa-user-plus text-white text-3xl"></i>
+                </div>
+                <h2 class="text-3xl font-extrabold text-custom-color">Register Now!</h2>
+            </div>
+
+            <form action="{{ url_for('register') }}" method="POST" class="space-y-6">
+                {% if not show_step2 %}
+                    <!-- Step 1: Username & Email -->
+                    <div class="relative">
+                        <i class="fas fa-user input-icon"></i>
+                        <input type="text" name="username" id="username" required placeholder="Username" class="form-input pl-10" value="{{ username or '' }}">
+                    </div>
+                    <div class="relative">
+                        <i class="fas fa-envelope input-icon"></i>
+                        <input type="email" name="email" id="email" required placeholder="Email" class="form-input pl-10" value="{{ email or '' }}">
+                    </div>
+                    <input type="hidden" name="step" value="1">
+                    <button type="submit" class="w-full px-4 py-3 bg-gradient-to-r from-med-blue to-med-cyan text-white font-semibold rounded-xl shadow-lg hover:from-blue-700 hover:to-cyan-700 transition flex items-center justify-center space-x-2">
+                        <i class="fas fa-envelope mr-2"></i>
+                        <span>Send Verification Code</span>
+                    </button>
+                {% else %}
+                    <!-- Step 2: Code & Password -->
+                    <input type="hidden" name="step" value="2">
+                    <input type="hidden" name="username" value="{{ username }}">
+                    <input type="hidden" name="email" value="{{ email }}">
+
+                    <div class="relative">
+                        <i class="fas fa-shield-alt input-icon"></i>
+                        <input type="text" name="verification_code" id="verification_code" required placeholder="Verification Code" class="form-input pl-10">
+                    </div>
+
+                    <div class="relative">
+                        <i class="fas fa-lock input-icon"></i>
+                        <input type="password" name="password" id="password" required placeholder="Create Password" class="form-input pl-10">
+                        <i class="fas fa-eye toggle-password-icon" id="togglePassword"></i>
+                    </div>
+
+                    <button type="submit" class="w-full px-4 py-3 bg-gradient-to-r from-med-blue to-med-cyan text-white font-semibold rounded-xl shadow-lg hover:from-blue-700 hover:to-cyan-700 transition flex items-center justify-center space-x-2">
+                        <i class="fas fa-user-plus mr-2"></i>
+                        <span>Complete Registration</span>
+                    </button>
+                {% endif %}
+            </form>
+
+            <div class="text-center mt-6 text-sm text-custom-color">
+                <p>Have an account? <a href="{{url_for('login')}}" class="font-medium link-custom-color hover:underline">Login Instead</a></p>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // Toggle password visibility
+        const togglePassword = document.querySelector('#togglePassword');
+        const password = document.querySelector('#password');
+        if (togglePassword && password) {
+            togglePassword.addEventListener('click', function () {
+                const type = password.type === 'password' ? 'text' : 'password';
+                password.type = type;
+                this.classList.toggle('fa-eye-slash');
+            });
+        }
+
+        // Auto-remove flash messages
+        document.addEventListener("DOMContentLoaded", function() {
+            setTimeout(() => {
+                document.querySelectorAll(".flash-message").forEach(el => {
+                    el.style.opacity = "0";
+                    setTimeout(() => el.remove(), 500);
+                });
+            }, 3000);
+        });
+    </script>
+</body>
+</html>

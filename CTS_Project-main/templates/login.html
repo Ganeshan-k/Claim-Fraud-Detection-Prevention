@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login Site</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'med-blue': '#1d4ed8',
+                        'med-cyan': '#0891b2',
+                        'med-emerald': '#059669',
+                        'med-amber': '#d97706',
+                    },
+                    boxShadow: {
+                        'soft': '0 10px 25px -5px rgba(0, 0, 0, 0.08)',
+                        'hover': '0 20px 30px -10px rgba(0, 0, 0, 0.12)',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        :root {
+            /* Customizable text colors */
+            --text-color: #212121;
+            --link-color: #0035c7;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: url("{{url_for('static',filename='login.jpg')}}") no-repeat center center;
+            background-size: cover;
+            background-attachment: fixed;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .card {
+            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .form-input {
+            width: 100%;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            border: 1px solid #1a355f;
+            background-color: #f9fafb;
+            color: #111827;
+            transition: all 0.2s;
+        }
+        .form-input:focus {
+            outline: none;
+            border-color: #0e38ab;
+            box-shadow: 0 0 0 2px rgba(8, 35, 109, 0.25);
+        }
+        .flash-message {
+            opacity: 1;
+            transition: opacity 0.5s ease-in-out;
+        }
+        .input-icon {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #3a3939;
+        }
+        .toggle-password-icon {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+            color: #3a3939;
+        }
+
+        .text-custom-color {
+            color: var(--text-color);
+        }
+
+        .link-custom-color {
+            color: var(--link-color);
+        }
+    </style>
+</head>
+<body class="p-4 antialiased">
+    <div class="fixed top-4 right-4 z-50 flex flex-col items-end space-y-2">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+            <div class="p-4 rounded-xl shadow-lg border-l-4 flash-message {% if category == 'success' %}bg-white border-green-500{% elif category == 'error' %}bg-white border-red-500{% endif %}">
+                <p class="text-sm font-semibold text-gray-800">{{ message }}</p>
+            </div>
+            {% endfor %}
+        {% endif %}
+        {% endwith %}
+    </div>
+
+    <main class="w-full max-w-sm mx-auto">
+        <section class="card p-8 rounded-2xl shadow-xl w-full">
+            <div class="text-center mb-6">
+                <div class="w-16 h-16 mx-auto bg-gradient-to-br from-med-blue to-med-cyan rounded-3xl flex items-center justify-center shadow-lg mb-4">
+                    <i class="fas fa-user-circle text-white text-3xl"></i>
+                </div>
+                <h2 class="text-3xl font-extrabold text-custom-color">Welcome Back!</h2>
+            </div>
+            
+            <form action="{{ url_for('login') }}" method="POST" class="space-y-6">
+                <div class="relative">
+                    <i class="fas fa-user input-icon"></i>
+                    <input type="text" name="email" id="email" required placeholder="Email or Username" class="form-input pl-10">
+                </div>
+                
+                <div class="relative">
+                    <i class="fas fa-lock input-icon"></i>
+                    <input type="password" name="password" id="password" required placeholder="Password" class="form-input pl-10">
+                    <i class="fas fa-eye toggle-password-icon" id="togglePassword"></i>
+                </div>
+
+                <div class="flex items-center justify-between text-sm text-custom-color">
+                    <label>
+                        <input type="checkbox" class="mr-2"> Remember me
+                    </label>
+                    <a href="{{url_for('forgetpassword')}}" class="font-medium link-custom-color hover:underline">Forget Password</a>
+                </div>
+
+                <button type="submit" class="w-full px-4 py-3 bg-gradient-to-r from-med-blue to-med-cyan text-white font-semibold rounded-xl shadow-lg hover:from-blue-700 hover:to-cyan-700 transition btn-hover flex items-center justify-center space-x-2">
+                    <i class="fas fa-sign-in-alt mr-2"></i>
+                    <span>Log In</span>
+                </button>
+            </form>
+
+            <div class="text-center mt-6 text-sm text-custom-color">
+                Don't have an account? <a href="{{url_for('register')}}" class="font-medium link-custom-color hover:underline">Register</a>
+            </div>
+        </section>
+    </main>
+    
+    <script>
+        // Password toggle functionality
+        const togglePassword = document.querySelector('#togglePassword');
+        const password = document.querySelector('#password');
+
+        togglePassword.addEventListener('click', function (e) {
+            const type = password.getAttribute('type') === 'password' ? 'text' : 'password';
+            password.setAttribute('type', type);
+            this.classList.toggle('fa-eye-slash');
+        });
+
+        // Flash message fade-out functionality
+        document.addEventListener("DOMContentLoaded", function() {
+            let flashMessages = document.querySelectorAll(".flash-message");
+            flashMessages.forEach(function(msg) {
+                setTimeout(() => {
+                    msg.style.opacity = "0";
+                    setTimeout(() => msg.remove(), 500);
+                }, 3000);
+            });
+        });
+    </script>
+</body>
+</html>

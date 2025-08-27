@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MedGuard AI | Real-Time Stream</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+    <style>
+        :root {
+            --primary: #1d4ed8;
+            --primary-light: #3b82f6;
+            --secondary: #059669;
+            --accent: #7c3aed;
+            --dark: #0f172a;
+            --light: #f8fafc;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #f0f4f8 0%, #e2e8f0 100%);
+            background-attachment: fixed;
+            color: #1e293b;
+            min-height: 100vh;
+        }
+        .card {
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(10px);
+        }
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 30px -10px rgba(0, 0, 0, 0.12), 0 0 20px rgba(59, 130, 246, 0.1);
+        }
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border-left-color: var(--primary);
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in {
+            animation: fadeIn 0.6s ease-out forwards;
+        }
+        .btn-hover {
+            transition: all 0.3s ease;
+        }
+        .btn-hover:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
+        }
+        .nav-item {
+            position: relative;
+        }
+        .nav-item::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: var(--primary);
+            transition: width 0.3s ease;
+        }
+        .nav-item:hover::after {
+            width: 100%;
+        }
+        canvas {
+            max-height: 300px;
+        }
+        .stat-card {
+            position: relative;
+            overflow: hidden;
+        }
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(to right, var(--primary), var(--secondary));
+        }
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+        @media (max-width: 768px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body class="min-h-screen text-gray-800 antialiased">
+
+    <!-- Header -->
+    <header class="bg-white shadow-sm border-b sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="w-12 h-12 bg-gradient-to-br from-blue-600 to-cyan-500 rounded-2xl flex items-center justify-center shadow-lg">
+                    <i class="fas fa-bolt text-white"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold text-gray-900">MedGuard AI</h1>
+                    <p class="text-sm text-gray-500 flex items-center">
+                        <span id="status-dot" class="w-2 h-2 bg-gray-400 rounded-full mr-2"></span>
+                        Real-Time Stream • Live Monitoring
+                    </p>
+                </div>
+            </div>
+            <nav class="hidden md:flex items-center space-x-6 text-sm">
+                <a href="{{ url_for('home') }}" class="nav-item text-gray-600 hover:text-blue-600 transition">Home</a>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+        <!-- Hero Section -->
+        <section class="text-center mb-10 animate-fade-in">
+            <h2 class="text-4xl font-extrabold text-gray-900 mb-4">
+                Real-Time <span class="text-blue-600">Fraud Detection</span> Stream
+            </h2>
+            <p class="text-lg text-gray-600">Monitor incoming Medicare claims with live AI-powered fraud analysis.</p>
+        </section>
+
+        <!-- Control Panel -->
+        <section class="card bg-white p-8 rounded-2xl shadow-md mb-8">
+            <div class="flex flex-col md:flex-row items-center justify-between gap-6 mb-8">
+                <div class="flex gap-4">
+                    <button id="start-btn" class="px-8 py-3 bg-gradient-to-r from-green-600 to-emerald-700 text-white font-semibold rounded-xl shadow-md hover:from-green-700 hover:to-emerald-800 transition btn-hover flex items-center gap-2">
+                        <i class="fas fa-play"></i> Start Stream
+                    </button>
+                    <button id="stop-btn" class="px-8 py-3 bg-gradient-to-r from-red-600 to-rose-700 text-white font-semibold rounded-xl shadow-md hover:from-red-700 hover:to-rose-800 transition btn-hover flex items-center gap-2" disabled>
+                        <i class="fas fa-stop"></i> Stop Stream
+                    </button>
+                </div>
+                <div class="flex items-center space-x-3">
+                    <div id="status-dot" class="w-2 h-2 bg-gray-400 rounded-full"></div>
+                    <span id="status-message" class="text-sm font-medium text-gray-600">Awaiting stream...</span>
+                </div>
+            </div>
+
+            <!-- Summary Stats -->
+            <div id="summary-stats" class="dashboard-grid mb-8">
+                <div class="stat-card bg-white p-6 rounded-2xl shadow-md">
+                    <div class="flex items-start justify-between">
+                        <div>
+                            <p class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Claims Processed</p>
+                            <p id="claims-processed-count" class="text-3xl font-extrabold text-blue-600 mb-2">0</p>
+                        </div>
+                        <div class="bg-blue-100 p-3 rounded-lg">
+                            <i class="fas fa-file-invoice text-blue-600 text-xl"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="stat-card bg-white p-6 rounded-2xl shadow-md">
+                    <div class="flex items-start justify-between">
+                        <div>
+                            <p class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Potential Flags</p>
+                            <p id="fraud-flags-count" class="text-3xl font-extrabold text-yellow-600 mb-2">0</p>
+                        </div>
+                        <div class="bg-yellow-100 p-3 rounded-lg">
+                            <i class="fas fa-flag text-yellow-600 text-xl"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="stat-card bg-white p-6 rounded-2xl shadow-md">
+                    <div class="flex items-start justify-between">
+                        <div>
+                            <p class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Potential Savings</p>
+                            <p id="total-savings" class="text-3xl font-extrabold text-green-600 mb-2">$0.00</p>
+                        </div>
+                        <div class="bg-green-100 p-3 rounded-lg">
+                            <i class="fas fa-dollar-sign text-green-600 text-xl"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- AI & Dashboard Buttons -->
+            <div id="ai-buttons-container" class="hidden grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+                <button id="explain-btn" class="px-6 py-3 bg-gradient-to-r from-green-600 to-green-700 text-white font-semibold rounded-xl shadow-md hover:from-green-700 hover:to-green-800 transition btn-hover flex items-center justify-center gap-2">
+                    <i class="fas fa-robot"></i> Generate AI Report
+                </button>
+                <button id="dashboard-btn" class="px-6 py-3 bg-gradient-to-r from-purple-600 to-purple-700 text-white font-semibold rounded-xl shadow-md hover:from-purple-700 hover:to-purple-800 transition btn-hover flex items-center justify-center gap-2">
+                    <i class="fas fa-chart-line"></i> Open Dashboard
+                </button>
+            </div>
+
+            <!-- Live Claims Table -->
+            <div class="card bg-white rounded-2xl p-6 shadow-md overflow-hidden">
+                <h3 class="text-xl font-semibold text-gray-800 mb-4">Live Claims</h3>
+                <div class="grid grid-cols-4 md:grid-cols-5 text-sm font-bold text-gray-700 mb-3 gap-4 border-b pb-2">
+                    <div class="col-span-2">Provider ID</div>
+                    <div class="hidden md:block">Claim Type</div>
+                    <div>Prediction</div>
+                    <div>Risk</div>
+                    <div class="text-right">Savings</div>
+                </div>
+                <div id="results-list" class="space-y-2 max-h-96 overflow-y-auto pr-2"></div>
+            </div>
+        </section>
+    </main>
+
+    <!-- ✅ Full-Screen Explainable AI Report Modal -->
+    <div id="explain-modal" class="fixed inset-0 bg-white z-50 overflow-auto hidden">
+        <button id="close-explain-modal" class="absolute top-4 right-4 text-white bg-gray-800 hover:bg-gray-700 rounded-full w-10 h-10 flex items-center justify-center text-xl z-10 btn-hover">&times;</button>
+        <div class="p-6 max-w-5xl mx-auto">
+            <div class="flex items-center mb-6">
+                <i class="fas fa-robot text-blue-600 text-2xl mr-2"></i>
+                <h3 class="text-3xl font-bold text-gray-800">Explainable AI Report</h3>
+            </div>
+            <div id="explain-content" class="text-gray-700 leading-relaxed bg-gray-50 p-6 rounded-lg max-h-[calc(100vh-160px)] overflow-y-auto whitespace-pre-line"></div>
+        </div>
+    </div>
+
+    <!-- Dashboard Modal -->
+    <div id="dashboard-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 overflow-auto hidden">
+        <div class="bg-white min-h-screen p-6">
+            <button id="close-dashboard-modal" class="absolute top-4 right-4 text-white bg-gray-800 hover:bg-gray-700 rounded-full w-10 h-10 flex items-center justify-center text-xl z-10 btn-hover">&times;</button>
+            <div class="flex items-center mb-6">
+                <i class="fas fa-chart-line text-blue-600 text-2xl mr-2"></i>
+                <h3 class="text-3xl font-bold text-gray-800">Real-Time Fraud Detection Dashboard</h3>
+            </div>
+
+            <!-- Dashboard KPIs -->
+            <div class="dashboard-grid mb-8">
+                <div class="stat-card bg-white p-5 rounded-2xl shadow-md">
+                    <div class="flex items-start justify-between">
+                        <div>
+                            <p class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Total Claims</p>
+                            <p id="dash-total-claims" class="text-2xl font-bold text-gray-800 mt-2">0</p>
+                        </div>
+                        <div class="bg-blue-100 p-2 rounded-lg">
+                            <i class="fas fa-file-invoice text-blue-600"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="stat-card bg-white p-5 rounded-2xl shadow-md">
+                    <div class="flex items-start justify-between">
+                        <div>
+                            <p class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Fraud Flags</p>
+                            <p id="dash-total-flags" class="text-2xl font-bold text-yellow-600 mt-2">0</p>
+                        </div>
+                        <div class="bg-yellow-100 p-2 rounded-lg">
+                            <i class="fas fa-flag text-yellow-600"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="stat-card bg-white p-5 rounded-2xl shadow-md">
+                    <div class="flex items-start justify-between">
+                        <div>
+                            <p class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Potential Savings</p>
+                            <p id="dash-total-savings" class="text-2xl font-bold text-green-600 mt-2">$0.00</p>
+                        </div>
+                        <div class="bg-green-100 p-2 rounded-lg">
+                            <i class="fas fa-dollar-sign text-green-600"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="stat-card bg-white p-5 rounded-2xl shadow-md">
+                    <div class="flex items-start justify-between">
+                        <div>
+                            <p class="text-sm font-semibold text-gray-500 uppercase tracking-wide">High-Risk Claims</p>
+                            <p id="dash-high-risk" class="text-2xl font-bold text-red-600 mt-2">0</p>
+                        </div>
+                        <div class="bg-red-100 p-2 rounded-lg">
+                            <i class="fas fa-exclamation-triangle text-red-600"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Charts Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- 1. Fraud vs Non-Fraud (Pie) -->
+                <div class="bg-white rounded-lg shadow p-4">
+                    <h4 class="text-lg font-semibold mb-3 text-gray-700">Fraud vs Non-Fraud</h4>
+                    <canvas id="fraudVsNonFraudChart"></canvas>
+                </div>
+                <!-- 2. Risk Level Distribution (Bar) -->
+                <div class="bg-white rounded-lg shadow p-4">
+                    <h4 class="text-lg font-semibold mb-3 text-gray-700">Risk Level Distribution</h4>
+                    <canvas id="riskLevelDistributionChart"></canvas>
+                </div>
+                <!-- 3. Claim Type Distribution (Doughnut) -->
+                <div class="bg-white rounded-lg shadow p-4">
+                    <h4 class="text-lg font-semibold mb-3 text-gray-700">Claim Type Distribution</h4>
+                    <canvas id="claimTypeDistributionChart"></canvas>
+                </div>
+                <!-- 4. Contributing Factors (Horizontal Bar) -->
+                <div class="bg-white rounded-lg shadow p-4">
+                    <h4 class="text-lg font-semibold mb-3 text-gray-700">Top Contributing Factors</h4>
+                    <canvas id="contributingFactorsChart"></canvas>
+                </div>
+                <!-- 5. Chronic Conditions (Bar) -->
+                <div class="bg-white rounded-lg shadow p-4">
+                    <h4 class="text-lg font-semibold mb-3 text-gray-700">Chronic Conditions</h4>
+                    <canvas id="chronicConditionChart"></canvas>
+                </div>
+                <!-- 6. Claim Amount Histogram (Bar) -->
+                <div class="bg-white rounded-lg shadow p-4">
+                    <h4 class="text-lg font-semibold mb-3 text-gray-700">Claim Amount Distribution</h4>
+                    <canvas id="claimAmountHistogram"></canvas>
+                </div>
+                <!-- 7. Model Confidence (Bar) -->
+                <div class="bg-white rounded-lg shadow p-4">
+                    <h4 class="text-lg font-semibold mb-3 text-gray-700">Model Confidence</h4>
+                    <canvas id="confidenceChart"></canvas>
+                </div>
+                <!-- 8. Fraud Pattern Radar (Radar) -->
+                <div class="bg-white rounded-lg shadow p-4">
+                    <h4 class="text-lg font-semibold mb-3 text-gray-700">Fraud Pattern Radar</h4>
+                    <canvas id="fraudPatternRadarChart"></canvas>
+                </div>
+                <!-- 9. Timeline (Line) -->
+                <div class="bg-white rounded-lg shadow p-4">
+                    <h4 class="text-lg font-semibold mb-3 text-gray-700">Daily Activity Timeline</h4>
+                    <canvas id="timelineChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let eventSource = null;
+        let processedCount = 0;
+        let fraudCount = 0;
+        let totalSavings = 0.0;
+        const allResults = [];
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const startBtn = document.getElementById('start-btn');
+            const stopBtn = document.getElementById('stop-btn');
+            const resultsList = document.getElementById('results-list');
+            const statusMessage = document.getElementById('status-message');
+            const statusDot = document.getElementById('status-dot');
+            const claimsProcessedCountEl = document.getElementById('claims-processed-count');
+            const fraudFlagsCountEl = document.getElementById('fraud-flags-count');
+            const totalSavingsEl = document.getElementById('total-savings');
+            const aiButtonsContainer = document.getElementById('ai-buttons-container');
+            const explainBtn = document.getElementById('explain-btn');
+            const dashboardBtn = document.getElementById('dashboard-btn');
+
+            // Modals
+            const explainModal = document.getElementById('explain-modal');
+            const explainContent = document.getElementById('explain-content');
+            const closeExplainModal = document.getElementById('close-explain-modal');
+            const dashboardModal = document.getElementById('dashboard-modal');
+            const closeDashboardModalBtn = document.getElementById('close-dashboard-modal');
+
+            // Dashboard KPIs
+            const dashTotalClaimsEl = document.getElementById('dash-total-claims');
+            const dashTotalFlagsEl = document.getElementById('dash-total-flags');
+            const dashTotalSavingsEl = document.getElementById('dash-total-savings');
+            const dashHighRiskEl = document.getElementById('dash-high-risk');
+
+            // Clear results and hide AI buttons on load
+            clearAllResults();
+            aiButtonsContainer.classList.add('hidden');
+
+            // Start Stream
+            startBtn.addEventListener('click', async () => {
+                await fetch('/start_stream', { method: 'POST' });
+                startBtn.disabled = true;
+                stopBtn.disabled = false;
+                statusMessage.textContent = 'Stream active';
+                statusDot.className = 'w-2 h-2 bg-green-500 rounded-full';
+                aiButtonsContainer.classList.add('hidden');
+                connectToStream();
+            });
+
+            // Stop Stream
+            stopBtn.addEventListener('click', async () => {
+                await fetch('/stop_stream', { method: 'POST' });
+                startBtn.disabled = false;
+                stopBtn.disabled = true;
+                if (eventSource) eventSource.close();
+                statusMessage.textContent = 'Stream stopped';
+                statusDot.className = 'w-2 h-2 bg-gray-400 rounded-full';
+                aiButtonsContainer.classList.remove('hidden');
+            });
+
+            function connectToStream() {
+                if (eventSource) eventSource.close();
+                eventSource = new EventSource('/stream');
+
+                eventSource.onmessage = async (event) => {
+                    const data = JSON.parse(event.data);
+                    if (data.type === 'valid') {
+                        const response = await fetch('/predict_single', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(data.data)
+                        });
+                        const predictionResult = await response.json();
+
+                        allResults.push(predictionResult);
+                        processedCount++;
+                        claimsProcessedCountEl.textContent = processedCount;
+
+                        if (predictionResult.prediction === 'Fraud') {
+                            fraudCount++;
+                            fraudFlagsCountEl.textContent = fraudCount;
+                            totalSavings += predictionResult.potential_savings;
+                            totalSavingsEl.textContent = `$${totalSavings.toFixed(2)}`;
+                        }
+
+                        const row = document.createElement('div');
+                        const riskColor = predictionResult.risk_level === 'High' ? 'text-red-600' :
+                                         predictionResult.risk_level === 'Medium' ? 'text-yellow-600' : 'text-green-600';
+                        const predColor = predictionResult.prediction === 'Fraud' ? 'font-bold text-red-600' : 'text-gray-700';
+
+                        row.className = `grid grid-cols-4 md:grid-cols-5 gap-4 py-2 px-2 rounded hover:bg-gray-100 text-sm transition-colors`;
+                        row.innerHTML = `
+                            <div class="col-span-2 font-medium">${predictionResult.provider_id}</div>
+                            <div class="hidden md:block text-gray-500">${predictionResult.claim_type}</div>
+                            <div class="${predColor}">${predictionResult.prediction}</div>
+                            <div class="${riskColor}">${predictionResult.risk_level}</div>
+                            <div class="font-medium text-gray-800 text-right">$${predictionResult.potential_savings.toFixed(2)}</div>
+                        `;
+                        resultsList.prepend(row);
+                    } else {
+                        statusMessage.textContent = `Error: ${data.reason}`;
+                        statusDot.className = 'w-2 h-2 bg-red-500 rounded-full';
+                    }
+                };
+
+                eventSource.onerror = () => {
+                    statusMessage.textContent = 'Connection failed';
+                    statusDot.className = 'w-2 h-2 bg-red-500 rounded-full';
+                    eventSource?.close();
+                };
+            }
+
+            // Open AI Report (Full-Screen)
+            explainBtn.addEventListener('click', async () => {
+                if (allResults.length === 0) {
+                    alert('No data available. Run the stream first.');
+                    return;
+                }
+                explainModal.classList.remove('hidden');
+                explainContent.innerHTML = '<div class="flex justify-center items-center py-4"><p>Generating AI insights...</p><div class="spinner ml-3"></div></div>';
+
+                try {
+                    const summaryData = {
+                        total_claims_processed: allResults.length,
+                        total_fraud_flags: fraudCount,
+                        total_potential_savings: totalSavings,
+                        top_fraud_drivers: getTopFraudDrivers(allResults)
+                    };
+                    const res = await fetch('/groq-explain-summary', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(summaryData)
+                    });
+                    const data = await res.json();
+                    explainContent.innerHTML = `<p class="whitespace-pre-line">${data.explanation || "Could not generate report."}</p>`;
+                } catch (err) {
+                    explainContent.innerHTML = "<p class='text-red-600'>Error connecting to AI service.</p>";
+                }
+            });
+
+            // Open Dashboard
+            dashboardBtn.addEventListener('click', () => {
+                if (allResults.length === 0) {
+                    alert('No data available. Run the stream first.');
+                    return;
+                }
+                dashboardModal.classList.remove('hidden');
+                renderCharts(allResults);
+            });
+
+            // Close Modals
+            closeExplainModal.addEventListener('click', () => {
+                explainModal.classList.add('hidden');
+            });
+
+            closeDashboardModalBtn.addEventListener('click', () => {
+                dashboardModal.classList.add('hidden');
+            });
+
+            // Helper Functions
+            function clearAllResults() {
+                allResults.length = 0;
+                processedCount = 0;
+                fraudCount = 0;
+                totalSavings = 0;
+                claimsProcessedCountEl.textContent = '0';
+                fraudFlagsCountEl.textContent = '0';
+                totalSavingsEl.textContent = '$0.00';
+                resultsList.innerHTML = '';
+            }
+
+            function getTopFraudDrivers(results) {
+                const featureImpacts = {};
+                results.filter(r => r.prediction === 'Fraud').forEach(c => {
+                    const regex = /(\w+)\s+\(impact:\s+([\d.]+)\)/g;
+                    let match;
+                    while (match = regex.exec(c.explanation)) {
+                        featureImpacts[match[1]] = (featureImpacts[match[1]] || 0) + parseFloat(match[2]);
+                    }
+                });
+                return Object.entries(featureImpacts)
+                    .sort(([, a], [, b]) => b - a)
+                    .slice(0, 3)
+                    .map(([f, v]) => `${f} (${v.toFixed(2)})`);
+            }
+
+            // --- NEW renderCharts Function with 9 Charts ---
+            function renderCharts(results) {
+                // Destroy old charts to prevent duplicates
+                Object.keys(window).forEach(k => {
+                    if (window[k] instanceof Chart) {
+                        window[k].destroy();
+                    }
+                });
+
+                const fraudClaims = results.filter(r => r.prediction === 'Fraud');
+                const nonFraudClaims = results.filter(r => r.prediction !== 'Fraud');
+
+                // Helper: Safe average
+                const avg = arr => arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
+
+                // 1. Pie Chart: Fraud vs Non-Fraud
+                new Chart(document.getElementById('fraudVsNonFraudChart').getContext('2d'), {
+                    type: 'pie',
+                    data: {
+                        labels: ['Fraudulent', 'Legitimate'],
+                        datasets: [{
+                            data: [fraudClaims.length, nonFraudClaims.length],
+                            backgroundColor: ['#ef4444', '#10b981'],
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: { legend: { position: 'bottom' } }
+                    }
+                });
+
+                // 2. Bar Chart: Risk Level Distribution
+                const risks = ['Low', 'Medium', 'High'].map(level =>
+                    results.filter(r => r.risk_level === level).length
+                );
+                new Chart(document.getElementById('riskLevelDistributionChart').getContext('2d'), {
+                    type: 'bar',
+                    data: {
+                        labels: ['Low Risk', 'Medium Risk', 'High Risk'],
+                        datasets: [{
+                            label: 'Claims',
+                            data: risks,
+                            backgroundColor: ['#10b981', '#f59e0b', '#ef4444']
+                        }]
+                    },
+                    options: { responsive: true }
+                });
+
+                // 3. Doughnut Chart: Claim Type Distribution
+                const types = {};
+                results.forEach(r => types[r.claim_type] = (types[r.claim_type] || 0) + 1);
+                new Chart(document.getElementById('claimTypeDistributionChart').getContext('2d'), {
+                    type: 'doughnut',
+                    data: {
+                        labels: Object.keys(types),
+                        datasets: [{
+                            data: Object.values(types),
+                            backgroundColor: ['#4f46e5', '#06b6d4']
+                        }]
+                    },
+                    options: { responsive: true, cutout: '50%' }
+                });
+
+                // 4. Horizontal Bar: Contributing Factors
+                const featureImpacts = {};
+                fraudClaims.forEach(c => {
+                    const regex = /(\w+)\s+\(impact:\s+([\d.]+)\)/g;
+                    let match;
+                    while (match = regex.exec(c.explanation)) {
+                        featureImpacts[match[1]] = (featureImpacts[match[1]] || 0) + parseFloat(match[2]);
+                    }
+                });
+                const topFactors = Object.entries(featureImpacts)
+                    .sort(([,a], [,b]) => b - a)
+                    .slice(0, 6);
+                new Chart(document.getElementById('contributingFactorsChart').getContext('2d'), {
+                    type: 'bar',
+                    data: {
+                        labels: topFactors.map(([f]) => f),
+                        datasets: [{
+                            label: 'Impact Score',
+                            data: topFactors.map(([,v]) => v),
+                            backgroundColor: '#f59e0b'
+                        }]
+                    },
+                    options: { 
+                        responsive: true, 
+                        indexAxis: 'y',
+                        scales: { x: { beginAtZero: true } }
+                    }
+                });
+
+                // 5. Bar: Chronic Conditions
+                const chronicConditions = [
+                    'ChronicCond_Diabetes', 'ChronicCond_Heartfailure', 'ChronicCond_KidneyDisease',
+                    'ChronicCond_Cancer', 'ChronicCond_Depression', 'ChronicCond_stroke'
+                ];
+                const conditionData = chronicConditions.map(cond => 
+                    results.filter(r => parseInt(r[cond] || 0) === 1).length
+                );
+                new Chart(document.getElementById('chronicConditionChart').getContext('2d'), {
+                    type: 'bar',
+                    data: {
+                        labels: chronicConditions.map(c => c.replace('ChronicCond_', '')),
+                        datasets: [{
+                            label: 'Affected Claims',
+                            data: conditionData,
+                            backgroundColor: '#6366f1'
+                        }]
+                    },
+                    options: { responsive: true }
+                });
+
+                // 6. Histogram: Claim Amount Distribution
+                const bins = [0, 1000, 2000, 3000, 4000, 5000, 10000, 20000];
+                const labels = ['0-1K', '1K-2K', '2K-3K', '3K-4K', '4K-5K', '5K-10K', '10K+'];
+                const allCounts = Array(bins.length).fill(0);
+                const fraudCounts = Array(bins.length).fill(0);
+                results.forEach(r => {
+                    const amount = r.InscClaimAmtReimbursed || 0;
+                    let idx = bins.findIndex((bin, i) => i > 0 && amount < bin) - 1;
+                    if (idx === -1) idx = bins.length - 2;
+                    allCounts[idx]++;
+                    if (r.prediction === 'Fraud') fraudCounts[idx]++;
+                });
+                new Chart(document.getElementById('claimAmountHistogram').getContext('2d'), {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'All Claims',
+                            data: allCounts,
+                            backgroundColor: 'rgba(156, 163, 175, 0.6)'
+                        }, {
+                            label: 'Fraud Claims',
+                            data: fraudCounts,
+                            backgroundColor: 'rgba(239, 68, 68, 0.7)'
+                        }]
+                    },
+                    options: { responsive: true, scales: { y: { beginAtZero: true } } }
+                });
+
+                // 7. NEW: Model Confidence Bar
+                const totalImpact = Object.values(featureImpacts).reduce((a, b) => a + b, 0);
+                const confidenceScore = Math.min(100, totalImpact * 5); // Simulated
+                new Chart(document.getElementById('confidenceChart').getContext('2d'), {
+                    type: 'bar',
+                    data: {
+                        labels: ['Model Confidence'],
+                        datasets: [{
+                            label: 'Confidence %',
+                            data: [confidenceScore],
+                            backgroundColor: confidenceScore > 70 ? '#10b981' : confidenceScore > 40 ? '#f59e0b' : '#ef4444'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: { y: { min: 0, max: 100, title: { display: true, text: 'Confidence (%)' } } }
+                    }
+                });
+
+                // 8. NEW: Fraud Pattern Radar
+                const patternScores = {
+                    'High Claim Amount': fraudClaims.filter(c => c.InscClaimAmtReimbursed > 10000).length,
+                    'Multiple Chronic Conditions': fraudClaims.filter(c => {
+                        let count = 0;
+                        for (let cond of chronicConditions) {
+                            if (parseInt(c[cond] || 0) === 1) count++;
+                        }
+                        return count >= 3;
+                    }).length,
+                    'Outlier Provider': topFactors.length > 0 ? topFactors[0][1] : 0
+                };
+                new Chart(document.getElementById('fraudPatternRadarChart').getContext('2d'), {
+                    type: 'radar',
+                    data: {
+                        labels: Object.keys(patternScores),
+                        datasets: [{
+                            label: 'Pattern Intensity',
+                            data: Object.values(patternScores),
+                            backgroundColor: 'rgba(239, 68, 68, 0.2)',
+                            borderColor: '#ef4444',
+                            pointBackgroundColor: '#ef4444'
+                        }]
+                    },
+                    options: { responsive: true }
+                });
+
+                // 9. NEW: Simulated Timeline
+                const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+                const dailyClaims = days.map(() => Math.floor(Math.random() * 5) + 1);
+                const fraudDaily = dailyClaims.map(val => Math.round(val * (Math.random() * 0.6 + 0.1)));
+                new Chart(document.getElementById('timelineChart').getContext('2d'), {
+                    type: 'line',
+                    data: {
+                        labels: days,
+                        datasets: [{
+                            label: 'Daily Claims',
+                            data: dailyClaims,
+                            borderColor: '#3b82f6',
+                            tension: 0.4,
+                            fill: false
+                        }, {
+                            label: 'Fraud Cases',
+                            data: fraudDaily,
+                            borderColor: '#ef4444',
+                            tension: 0.4,
+                            fill: false
+                        }]
+                    },
+                    options: { responsive: true, plugins: { legend: { position: 'top' } } }
+                });
+
+                // Update Dashboard KPIs
+                dashTotalClaimsEl.textContent = results.length;
+                dashTotalFlagsEl.textContent = fraudCount;
+                dashTotalSavingsEl.textContent = `$${totalSavings.toFixed(2)}`;
+                dashHighRiskEl.textContent = results.filter(r => r.risk_level === 'High').length;
+            }
+        });
+    </script>
+</body>
+</html>

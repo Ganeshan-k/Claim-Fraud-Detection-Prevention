@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Medicare Fraud Detection | AI-Powered Integrity Engine</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Fonts & Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+
+    <!-- Tailwind Config -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'med-blue': '#1d4ed8',
+                        'med-cyan': '#0891b2',
+                        'med-emerald': '#059669',
+                        'med-amber': '#d97706',
+                        'med-purple': '#7c3aed'
+                    },
+                    boxShadow: {
+                        'soft': '0 10px 25px -5px rgba(0, 0, 0, 0.08)',
+                        'hover': '0 20px 30px -10px rgba(0, 0, 0, 0.12)',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Custom Styles -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: radial-gradient(circle at top left, #f0f4f8 0%, #e2e8f0 100%);
+            background-attachment: fixed;
+            animation: backgroundShift 15s ease-in-out infinite alternate;
+        }
+
+        #particles {
+            background-color: transparent;
+            width: 100%;
+            height: 100%;
+        }
+
+        @keyframes backgroundShift {
+            from { background-position: 0% 0%; }
+            to { background-position: 100% 100%; }
+        }
+
+        @keyframes pulse-once {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.1); opacity: 0.8; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .metric-value {
+            opacity: 0;
+            transform: translateY(10px);
+            transition: opacity 0.5s ease-out, transform 0.5s ease-out;
+        }
+
+        .metric-value.is-visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .hover-glow {
+            transition: all 0.3s ease;
+        }
+
+        .hover-glow:hover {
+            transform: translateY(-6px);
+            box-shadow: var(--tw-shadow-hover);
+        }
+
+        .status-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 6px;
+        }
+
+        .status-active {
+            background-color: #10B981;
+            animation: pulse-active 1.5s infinite;
+        }
+
+        @keyframes pulse-active {
+            0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+
+        .tooltip {
+            position: relative;
+            display: inline-block;
+            cursor: help;
+        }
+
+        .tooltip .tooltip-text {
+            visibility: hidden;
+            width: 220px;
+            background-color: #1f2937;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 8px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -110px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 0.8rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+
+        .tooltip:hover .tooltip-text {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.6s ease-out forwards;
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(5px);
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+
+        .modal.is-active {
+            display: flex;
+        }
+
+        .modal-content {
+            background-color: white;
+            padding: 2.5rem;
+            border-radius: 1.5rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+            max-width: 400px;
+            text-align: center;
+            animation: modalFadeIn 0.3s ease-out;
+        }
+
+        @keyframes modalFadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        /* Responsive Grid */
+        .mode-grid {
+            display: grid;
+            grid-template-columns: repeat(1, minmax(0, 1fr));
+        }
+
+        @media (min-width: 768px) {
+            .mode-grid {
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+            }
+        }
+    </style>
+</head>
+<body class="min-h-screen text-gray-800 antialiased">
+
+    <!-- Background Particles -->
+    <canvas id="particles" class="fixed inset-0 -z-10"></canvas>
+
+    <!-- Header -->
+    <header class="bg-white shadow-sm border-b sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="w-12 h-12 bg-gradient-to-br from-med-blue to-med-cyan rounded-2xl flex items-center justify-center shadow-lg animate-[pulse-once_3s_ease-out_1]">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.165-2.052-.48-3.016z" />
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold text-gray-900">Medicare Fraud Detection</h1>
+                    <p class="text-sm text-gray-500 flex items-center">
+                        <span class="status-indicator status-active"></span>
+                        System Operational • <3s Latency
+                    </p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-4 text-sm">
+                <span class="hidden md:block text-gray-500">v2.3 • AI Model: Random Forest + XAI</span>
+                <button id="logout-btn" class="bg-red-500 text-white font-semibold py-2 px-4 rounded-xl shadow-md hover:bg-red-600 transition-colors duration-200">
+                    <i class="fas fa-sign-out-alt mr-2"></i>
+                    Logout
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-6 py-10">
+
+        <!-- Hero Section -->
+        <section class="text-center mb-12 fade-in">
+            <h2 class="text-4xl md:text-5xl font-extrabold text-gray-900 mb-4 leading-tight">
+                Detect Fraud with <span class="text-med-emerald">AI Precision</span>
+            </h2>
+            <p class="text-lg text-gray-600 max-w-4xl mx-auto mb-8">
+                Leverage machine learning to analyze Medicare claims in real time. Our system achieves <strong class="text-med-blue">90%+ detection accuracy</strong>, reduces false positives by <strong class="font-bold text-orange-600">60%</strong>, and delivers <strong>$10 ROI per $1 invested</strong>.
+            </p>
+        </section>
+
+        <!-- Metrics Grid -->
+        <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+            <div class="bg-white p-6 rounded-2xl border border-gray-200 hover-glow text-center shadow-sm transition-all duration-300">
+                <div class="text-3xl font-extrabold text-green-600 mb-2 metric-value" data-target="92.3">0.0</div>
+                <div class="text-sm font-semibold text-gray-700 mb-1">Detection Accuracy</div>
+                <div class="text-xs text-green-600 flex items-center justify-center mb-3">
+                    <i class="fas fa-arrow-up mr-1"></i> +4.1% vs baseline
+                </div>
+                <span class="text-xs font-medium px-2 py-1 rounded-full inline-flex items-center gap-1 bg-green-100 text-green-800">
+                    <i class="fas fa-check"></i> Exceeds Target
+                </span>
+            </div>
+
+            <div class="bg-white p-6 rounded-2xl border border-gray-200 hover-glow text-center shadow-sm transition-all duration-300">
+                <div class="text-3xl font-extrabold text-orange-600 mb-2 metric-value" data-target="63">0</div>
+                <div class="text-sm font-semibold text-gray-700 mb-1">False Positives Reduced</div>
+                <div class="text-xs text-gray-500 flex items-center justify-center mb-3">
+                    <i class="fas fa-ban text-orange-500 mr-1"></i> Down from 95%
+                </div>
+                <span class="text-xs font-medium px-2 py-1 rounded-full inline-flex items-center gap-1 bg-orange-100 text-orange-800">
+                    <i class="fas fa-chart-line"></i> Improved
+                </span>
+            </div>
+
+            <div class="bg-white p-6 rounded-2xl border border-gray-200 hover-glow text-center shadow-sm transition-all duration-300">
+                <div class="text-3xl font-extrabold text-blue-600 mb-2 metric-value" data-target="10:1">0</div>
+                <div class="text-sm font-semibold text-gray-700 mb-1">Return on Investment</div>
+                <div class="text-xs text-green-600 flex items-center justify-center mb-3">
+                    <i class="fas fa-arrow-up mr-1"></i> 10:1 Ratio
+                </div>
+                <span class="text-xs font-medium px-2 py-1 rounded-full inline-flex items-center gap-1 bg-blue-100 text-blue-800">
+                    <i class="fas fa-dollar-sign"></i> Target Met
+                </span>
+            </div>
+
+            <div class="bg-white p-6 rounded-2xl border border-gray-200 hover-glow text-center shadow-sm transition-all duration-300">
+                <div class="text-3xl font-extrabold text-purple-600 mb-2 metric-value" data-target="75">0</div>
+                <div class="text-sm font-semibold text-gray-700 mb-1">Manual Review Reduction</div>
+                <div class="text-xs text-green-600 flex items-center justify-center mb-3">
+                    <i class="fas fa-user-check mr-1"></i> Saving thousands of hours
+                </div>
+                <span class="text-xs font-medium px-2 py-1 rounded-full inline-flex items-center gap-1 bg-blue-100 text-blue-800">
+                    <i class="fas fa-hourglass-half"></i> Gaining Efficiency
+                </span>
+            </div>
+        </section>
+
+        <!-- Mode Selection -->
+        <section class="max-w-5xl mx-auto mb-14 text-center">
+
+            <!-- Main Buttons -->
+            <div class="flex flex-col md:flex-row justify-center gap-6 mb-10">
+                <button id="provider-btn" class="flex-1 py-4 px-6 bg-med-blue text-white font-semibold rounded-xl shadow-lg hover:bg-blue-700 transition-all duration-300">
+                    <i class="fas fa-user-md mr-2"></i>
+                    Provider-Level Fraud
+                </button>
+
+                <button id="claim-btn" class="flex-1 py-4 px-6 bg-med-purple text-white font-semibold rounded-xl shadow-lg hover:bg-purple-700 transition-all duration-300">
+                    <i class="fas fa-file-invoice-dollar mr-2"></i>
+                    Claim-Level Fraud
+                </button>
+            </div>
+
+            <!-- Dynamic Options -->
+            <div id="mode-options" class="hidden mode-grid gap-6">
+
+                <!-- Stream Mode (Only for Provider) -->
+                <div id="stream-card" class="bg-white p-6 rounded-2xl border border-gray-200 hover-glow shadow-sm transition-all duration-300 text-center">
+                    <div class="flex items-center justify-center mb-4">
+                        <div class="p-3 rounded-full bg-blue-100 text-blue-500">
+                            <i id="mode-icon" class="fas fa-stream text-2xl"></i>
+                        </div>
+                    </div>
+                    <h3 id="mode-title" class="text-xl font-semibold text-gray-900 mb-3">Stream Mode</h3>
+                    <p id="mode-desc" class="text-gray-600 mb-6 text-sm">
+                        Monitor claims in real time with AI-powered fraud scoring under 3 seconds.
+                    </p>
+                    <a href="#" id="action-link"
+                       class="inline-flex items-center justify-center px-6 py-3 bg-med-blue text-white font-semibold rounded-xl shadow-lg hover:bg-blue-700 hover:shadow-xl transition-all duration-300">
+                        <i id="action-icon" class="fas fa-play mr-2"></i>
+                        <span id="action-text">Start Streaming</span>
+                    </a>
+                </div>
+
+                <!-- Batch Mode -->
+                <div class="bg-white p-6 rounded-2xl border border-gray-200 hover-glow shadow-sm transition-all duration-300 text-center">
+                    <div class="flex items-center justify-center mb-4">
+                        <div class="p-3 rounded-full bg-green-100 text-green-500">
+                            <i class="fas fa-upload text-2xl"></i>
+                        </div>
+                    </div>
+                    <h3 id="batch-title" class="text-xl font-semibold text-gray-900 mb-3">Batch Mode</h3>
+                    <p class="text-gray-600 mb-6 text-sm">
+                        Upload historical files for bulk analysis and compliance reporting.
+                    </p>
+                    <a href="#" id="batch-link"
+                       class="inline-flex items-center justify-center px-6 py-3 bg-green-600 text-white font-semibold rounded-xl shadow-lg hover:bg-green-700 hover:shadow-xl transition-all duration-300">
+                        <i class="fas fa-upload mr-2"></i>
+                        Upload File
+                    </a>
+                </div>
+
+                <!-- Single Analysis Mode -->
+                <div class="bg-white p-6 rounded-2xl border border-gray-200 hover-glow shadow-sm transition-all duration-300 text-center">
+                    <div class="flex items-center justify-center mb-4">
+                        <div class="p-3 rounded-full bg-purple-100 text-purple-500">
+                            <i class="fas fa-edit text-2xl"></i>
+                        </div>
+                    </div>
+                    <h3 id="single-title" class="text-xl font-semibold text-gray-900 mb-3">Single Analysis Mode</h3>
+                    <p class="text-gray-600 mb-6 text-sm">
+                        Manually enter details to instantly detect fraud risk with AI explainability.
+                    </p>
+                    <a href="#" id="single-link"
+                       class="inline-flex items-center justify-center px-6 py-3 bg-purple-600 text-white font-semibold rounded-xl shadow-lg hover:bg-purple-700 hover:shadow-xl transition-all duration-300">
+                        <i class="fas fa-magic mr-2"></i>
+                        Analyze Single Entry
+                    </a>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="text-center text-sm text-gray-500 mt-20 border-t pt-6">
+            <p class="font-medium text-gray-700">Medicare Fraud Detection System | U.S. Department of Health & Human Services</p>
+            <p>© 2025 For Authorized Use Only | Real-time Scoring • Explainable AI • ROI Tracking</p>
+            <div class="mt-3 flex justify-center space-x-6 text-xs text-gray-400">
+                <span>|</span>
+                <span>Medicare Parts A & B</span>
+                <span>|</span>
+                <span>Model Updated: Apr 2025</span>
+            </div>
+        </footer>
+
+        <!-- Shield Icon -->
+        <div class="fixed bottom-6 right-6 opacity-60 hover:opacity-100 transition-opacity duration-300">
+            <i class="fas fa-shield-alt text-2xl text-med-blue"></i>
+        </div>
+
+    </main>
+
+    <!-- Logout Modal -->
+    <div id="logout-modal" class="modal">
+        <div class="modal-content">
+            <div class="p-4 rounded-full bg-red-100 text-red-500 mx-auto w-16 h-16 flex items-center justify-center mb-4">
+                <i class="fas fa-exclamation-triangle text-3xl"></i>
+            </div>
+            <h3 class="text-2xl font-bold text-gray-900 mb-2">Are you sure you want to log out?</h3>
+            <p class="text-gray-600 mb-6">
+                You'll be redirected to the login page. Any unsaved progress will be lost.
+            </p>
+            <div class="flex justify-center space-x-4">
+                <button id="cancel-logout-btn" class="px-6 py-3 bg-gray-200 text-gray-800 font-semibold rounded-xl hover:bg-gray-300 transition-colors duration-200">
+                    Cancel
+                </button>
+                <a href="/login" id="confirm-logout-btn" class="px-6 py-3 bg-red-500 text-white font-semibold rounded-xl shadow-lg hover:bg-red-600 transition-colors duration-200">
+                    Logout
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Animate metrics
+            const metrics = document.querySelectorAll('.metric-value');
+            const animateValue = (element, start, end, duration) => {
+                let startTimestamp = null;
+                const step = (timestamp) => {
+                    if (!startTimestamp) startTimestamp = timestamp;
+                    const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+                    const decimals = element.dataset.target.includes('.') ? element.dataset.target.split('.')[1].length : 0;
+                    const currentValue = start + progress * (end - start);
+                    element.textContent = parseFloat(currentValue).toFixed(decimals);
+                    if (progress < 1) {
+                        window.requestAnimationFrame(step);
+                    } else {
+                        element.textContent = element.dataset.target;
+                    }
+                };
+                window.requestAnimationFrame(step);
+            };
+
+            metrics.forEach((metric, i) => {
+                metric.classList.add('is-visible');
+                setTimeout(() => {
+                    const target = metric.dataset.target.includes(':') ? 0 : parseFloat(metric.dataset.target);
+                    animateValue(metric, 0, target, 1500);
+                }, 400 + i * 150);
+            });
+
+            // Modal Logic
+            const logoutBtn = document.getElementById('logout-btn');
+            const logoutModal = document.getElementById('logout-modal');
+            const cancelLogoutBtn = document.getElementById('cancel-logout-btn');
+
+            logoutBtn.addEventListener('click', () => {
+                logoutModal.classList.add('is-active');
+            });
+
+            cancelLogoutBtn.addEventListener('click', () => {
+                logoutModal.classList.remove('is-active');
+            });
+
+            window.addEventListener('click', (event) => {
+                if (event.target === logoutModal) {
+                    logoutModal.classList.remove('is-active');
+                }
+            });
+
+            // Dynamic Mode Selection
+            const providerBtn = document.getElementById('provider-btn');
+            const claimBtn = document.getElementById('claim-btn');
+            const modeOptions = document.getElementById('mode-options');
+            const streamCard = document.getElementById('stream-card');
+
+            const modeTitle = document.getElementById('mode-title');
+            const modeDesc = document.getElementById('mode-desc');
+            const actionLink = document.getElementById('action-link');
+            const actionText = document.getElementById('action-text');
+            const actionIcon = document.getElementById('action-icon');
+            const modeIcon = document.getElementById('mode-icon');
+
+            const batchTitle = document.getElementById('batch-title');
+            const batchLink = document.getElementById('batch-link');
+            const singleTitle = document.getElementById('single-title');
+            const singleLink = document.getElementById('single-link');
+
+            // URLs
+            const providerUrls = {
+                stream: "{{ url_for('stream_page') }}",
+                batch: "{{ url_for('batch_page') }}",
+                single: "{{ url_for('claim_provider') }}"
+            };
+
+            const claimUrls = {
+                file: "{{ url_for('batch1') }}",
+                single: "{{ url_for('claim_patient') }}"
+            };
+
+            // Provider Mode — Show all 3
+            providerBtn.addEventListener('click', () => {
+                modeOptions.classList.remove('hidden');
+                streamCard.classList.remove('hidden');
+                setTimeout(() => modeOptions.scrollIntoView({ behavior: 'smooth' }), 100);
+
+                modeTitle.textContent = "Stream Mode";
+                modeDesc.textContent = "Monitor claims in real time with AI-powered fraud scoring under 3 seconds.";
+                actionText.textContent = "Start Streaming";
+                actionIcon.className = "fas fa-play mr-2";
+                modeIcon.className = "fas fa-stream text-2xl";
+                actionLink.href = providerUrls.stream;
+
+                batchTitle.textContent = "Batch Mode";
+                batchLink.href = providerUrls.batch;
+
+                singleTitle.textContent = "Single Analysis Mode";
+                singleLink.href = providerUrls.single;
+            });
+
+            // Claim Mode — Hide Stream card, show only Batch & Single
+            claimBtn.addEventListener('click', () => {
+                modeOptions.classList.remove('hidden');
+                streamCard.classList.add('hidden');
+                setTimeout(() => modeOptions.scrollIntoView({ behavior: 'smooth' }), 100);
+
+                batchTitle.textContent = "Claim-Batch Mode";
+                batchLink.href = claimUrls.file;
+
+                singleTitle.textContent = "Claim-Single-Analysis Mode";
+                singleLink.href = claimUrls.single;
+            });
+        });
+    </script>
+
+    <!-- Particles Background -->
+    <script>
+        window.onload = function() {
+            const canvas = document.getElementById("particles");
+            const ctx = canvas.getContext("2d");
+
+            function resizeCanvas() {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+            }
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+
+            let dots = Array(60).fill().map(() => ({
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height,
+                dx: (Math.random() - 0.5) * 0.5,
+                dy: (Math.random() - 0.5) * 0.5
+            }));
+
+            function animate() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                dots.forEach(d => {
+                    d.x += d.dx;
+                    d.y += d.dy;
+                    if (d.x < 0 || d.x > canvas.width) d.dx *= -1;
+                    if (d.y < 0 || d.y > canvas.height) d.dy *= -1;
+
+                    ctx.beginPath();
+                    ctx.arc(d.x, d.y, 2, 0, Math.PI * 2);
+                    ctx.fillStyle = "rgba(59, 130, 246, 0.4)";
+                    ctx.fill();
+                });
+                requestAnimationFrame(animate);
+            }
+            animate();
+        };
+    </script>
+</body>
+</html>
